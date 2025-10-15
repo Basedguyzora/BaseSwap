@@ -1,0 +1,221 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Droplets, Plus, TrendingUp, DollarSign, Percent } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+export default function PoolsPage() {
+  const [activeTab, setActiveTab] = useState("all");
+
+  const { data: pools = [] } = useQuery({
+    queryKey: ['pools'],
+    queryFn: () => base44.entities.LiquidityPool.list('-liquidity_usd'),
+    initialData: [],
+  });
+
+  const userPools = pools.filter(p => p.user_share > 0);
+
+  return (
+    <div className="max-w-7xl mx-auto">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">Liquidity Pools</h1>
+          <p className="text-gray-400">Provide liquidity and earn trading fees</p>
+        </div>
+        <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+          <Plus className="w-4 h-4 mr-2" />
+          Add Liquidity
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid md:grid-cols-3 gap-4 mb-8">
+        <Card className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border-blue-500/20 backdrop-blur-xl">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400 mb-1">Total Value Locked</p>
+                <p className="text-2xl font-bold text-white">
+                  ${pools.reduce((sum, p) => sum + p.liquidity_usd, 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="bg-blue-500/20 rounded-full p-3">
+                <DollarSign className="w-6 h-6 text-blue-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-600/20 to-purple-800/20 border-purple-500/20 backdrop-blur-xl">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400 mb-1">24h Volume</p>
+                <p className="text-2xl font-bold text-white">
+                  ${pools.reduce((sum, p) => sum + p.volume_24h, 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="bg-purple-500/20 rounded-full p-3">
+                <TrendingUp className="w-6 h-6 text-purple-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-600/20 to-green-800/20 border-green-500/20 backdrop-blur-xl">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400 mb-1">Your Liquidity</p>
+                <p className="text-2xl font-bold text-white">
+                  ${userPools.reduce((sum, p) => sum + p.user_liquidity_usd, 0).toLocaleString()}
+                </p>
+              </div>
+              <div className="bg-green-500/20 rounded-full p-3">
+                <Droplets className="w-6 h-6 text-green-400" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Pools List */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-white/5 border border-white/10 mb-6">
+          <TabsTrigger value="all" className="data-[state=active]:bg-white/10">
+            All Pools
+          </TabsTrigger>
+          <TabsTrigger value="my" className="data-[state=active]:bg-white/10">
+            My Positions
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all">
+          <div className="grid md:grid-cols-2 gap-4">
+            {pools.map((pool) => (
+              <Card key={pool.id} className="bg-slate-900/50 border-white/10 backdrop-blur-xl hover:border-white/20 transition-all">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <div className="flex items-center -space-x-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full border-2 border-slate-900" />
+                        <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full border-2 border-slate-900" />
+                      </div>
+                      <span className="font-bold">{pool.token_a}/{pool.token_b}</span>
+                    </CardTitle>
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                      {pool.apr.toFixed(2)}% APR
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Total Liquidity</span>
+                      <span className="text-white font-medium">
+                        ${pool.liquidity_usd.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">24h Volume</span>
+                      <span className="text-white font-medium">
+                        ${pool.volume_24h.toLocaleString()}
+                      </span>
+                    </div>
+                    {pool.user_share > 0 && (
+                      <div className="flex justify-between text-sm pt-2 border-t border-white/10">
+                        <span className="text-gray-400">Your Share</span>
+                        <span className="text-blue-400 font-medium">
+                          ${pool.user_liquidity_usd.toLocaleString()} ({pool.user_share}%)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button className="flex-1 bg-white/5 hover:bg-white/10">
+                      Add
+                    </Button>
+                    {pool.user_share > 0 && (
+                      <Button className="flex-1 bg-white/5 hover:bg-white/10">
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="my">
+          {userPools.length === 0 ? (
+            <Card className="bg-slate-900/50 border-white/10">
+              <CardContent className="py-16">
+                <div className="text-center">
+                  <Droplets className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    No liquidity positions yet
+                  </h3>
+                  <p className="text-gray-400 mb-6">
+                    Add liquidity to a pool to start earning fees
+                  </p>
+                  <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Liquidity
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">
+              {userPools.map((pool) => (
+                <Card key={pool.id} className="bg-slate-900/50 border-white/10 backdrop-blur-xl">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="flex items-center gap-2 text-white">
+                        <div className="flex items-center -space-x-2">
+                          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full border-2 border-slate-900" />
+                          <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full border-2 border-slate-900" />
+                        </div>
+                        <span className="font-bold">{pool.token_a}/{pool.token_b}</span>
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Your Liquidity</span>
+                        <span className="text-white font-medium">
+                          ${pool.user_liquidity_usd.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">Pool Share</span>
+                        <span className="text-white font-medium">{pool.user_share}%</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-400">APR</span>
+                        <span className="text-green-400 font-medium">{pool.apr.toFixed(2)}%</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button className="flex-1 bg-white/5 hover:bg-white/10">
+                        Add More
+                      </Button>
+                      <Button className="flex-1 bg-white/5 hover:bg-white/10">
+                        Remove
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
