@@ -1,0 +1,122 @@
+import React, { useState } from "react";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import SwapCard from "../components/swap/SwapCard";
+import PriceChart from "../components/swap/PriceChart";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Activity, ArrowRight, ExternalLink } from "lucide-react";
+import { format } from "date-fns";
+
+export default function SwapPage() {
+  const queryClient = useQueryClient();
+  const [selectedToken, setSelectedToken] = useState(null);
+
+  const { data: tokens = [] } = useQuery({
+    queryKey: ['tokens'],
+    queryFn: () => base44.entities.Token.list(),
+    initialData: [],
+  });
+
+  const { data: recentTransactions = [] } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: () => base44.entities.Transaction.list('-created_date', 5),
+    initialData: [],
+  });
+
+  const createTransactionMutation = useMutation({
+    mutationFn: (txData) => base44.entities.Transaction.create(txData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    },
+  });
+
+  const handleSwap = async (swapData) => {
+    await createTransactionMutation.mutateAsync(swapData);
+  };
+
+  React.useEffect(() => {
+    if (tokens.length > 0) {
+      setSelectedToken(tokens.find(t => t.symbol === "ETH") || tokens[0]);
+    }
+  }, [tokens]);
+
+  return (
+    <div className="max-w-7xl mx-auto">
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Left Column - Swap Interface */}
+        <div className="lg:col-span-1">
+          <SwapCard tokens={tokens} onSwap={handleSwap} />
+        </div>
+
+        {/* Right Column - Charts & Activity */}
+        <div className="lg:col-span-2 space-y-6">
+          <PriceChart token={selectedToken} />
+
+          {/* Recent Activity */}
+          <Card className="bg-slate-900/50 border-white/10 backdrop-blur-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Activity className="w-5 h-5" />
+                Recent Transactions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentTransactions.length === 0 ? (
+                <div className="text-center py-12">
+                  <Activity className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400">No transactions yet</p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Your swap history will appear here
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentTransactions.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-2">
+                          <ArrowRight className="w-4 h-4 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">
+                            {tx.amount_from} {tx.token_from} → {tx.amount_to.toFixed(4)} {tx.token_to}
+                          </p>
+                          <p className="text-sm text-gray-400">
+                            {format(new Date(tx.created_date), "MMM d, yyyy HH:mm")}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <p className={`text-sm font-medium ${
+                            tx.status === "completed" ? "text-green-400" : "text-yellow-400"
+                          }`}>
+                            {tx.status}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            ${tx.gas_fee} gas
+                          </p>
+                        </div>
+                        <a
+                          href={`https://basescan.org/tx/${tx.tx_hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-white transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
