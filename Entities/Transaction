@@ -1,0 +1,60 @@
+{
+  "name": "Transaction",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "swap",
+        "add_liquidity",
+        "remove_liquidity"
+      ],
+      "description": "Transaction type"
+    },
+    "token_from": {
+      "type": "string",
+      "description": "Source token symbol"
+    },
+    "token_to": {
+      "type": "string",
+      "description": "Destination token symbol"
+    },
+    "amount_from": {
+      "type": "number",
+      "description": "Amount of source token"
+    },
+    "amount_to": {
+      "type": "number",
+      "description": "Amount of destination token"
+    },
+    "price_impact": {
+      "type": "number",
+      "description": "Price impact percentage"
+    },
+    "gas_fee": {
+      "type": "number",
+      "description": "Gas fee in USD"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "completed",
+        "failed"
+      ],
+      "default": "completed",
+      "description": "Transaction status"
+    },
+    "tx_hash": {
+      "type": "string",
+      "description": "Transaction hash"
+    }
+  },
+  "required": [
+    "type",
+    "token_from",
+    "token_to",
+    "amount_from",
+    "amount_to"
+  ]
+}
