@@ -1,0 +1,41 @@
+{
+  "name": "LiquidityPool",
+  "type": "object",
+  "properties": {
+    "token_a": {
+      "type": "string",
+      "description": "First token symbol"
+    },
+    "token_b": {
+      "type": "string",
+      "description": "Second token symbol"
+    },
+    "liquidity_usd": {
+      "type": "number",
+      "description": "Total liquidity in USD"
+    },
+    "volume_24h": {
+      "type": "number",
+      "description": "24h trading volume"
+    },
+    "apr": {
+      "type": "number",
+      "description": "Annual percentage rate"
+    },
+    "user_share": {
+      "type": "number",
+      "description": "User's share of the pool (percentage)"
+    },
+    "user_liquidity_usd": {
+      "type": "number",
+      "description": "User's liquidity value in USD"
+    }
+  },
+  "required": [
+    "token_a",
+    "token_b",
+    "liquidity_usd",
+    "volume_24h",
+    "apr"
+  ]
+}
