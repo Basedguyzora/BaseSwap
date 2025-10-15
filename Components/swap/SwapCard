@@ -1,0 +1,276 @@
+import React, { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ArrowDown, Settings, RefreshCw, AlertCircle, Zap } from "lucide-react";
+import TokenSelector from "./TokenSelector";
+import { Slider } from "@/components/ui/slider";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+export default function SwapCard({ tokens, onSwap }) {
+  const [fromToken, setFromToken] = useState(null);
+  const [toToken, setToToken] = useState(null);
+  const [fromAmount, setFromAmount] = useState("");
+  const [toAmount, setToAmount] = useState("");
+  const [slippage, setSlippage] = useState(0.5);
+  const [showFromSelector, setShowFromSelector] = useState(false);
+  const [showToSelector, setShowToSelector] = useState(false);
+  const [priceImpact, setPriceImpact] = useState(0);
+
+  useEffect(() => {
+    if (tokens && tokens.length > 0) {
+      setFromToken(tokens.find(t => t.symbol === "ETH") || tokens[0]);
+      setToToken(tokens.find(t => t.symbol === "USDC") || tokens[1]);
+    }
+  }, [tokens]);
+
+  useEffect(() => {
+    if (fromAmount && fromToken && toToken) {
+      const calculatedAmount = (parseFloat(fromAmount) * fromToken.price_usd) / toToken.price_usd;
+      setToAmount(calculatedAmount.toFixed(6));
+      setPriceImpact((Math.random() * 0.5).toFixed(2));
+    } else {
+      setToAmount("");
+      setPriceImpact(0);
+    }
+  }, [fromAmount, fromToken, toToken]);
+
+  const handleSwapTokens = () => {
+    const temp = fromToken;
+    setFromToken(toToken);
+    setToToken(temp);
+    setFromAmount(toAmount);
+  };
+
+  const handleMaxClick = () => {
+    setFromAmount("1.5");
+  };
+
+  const handleSwap = () => {
+    if (fromToken && toToken && fromAmount && toAmount) {
+      onSwap({
+        type: "swap",
+        token_from: fromToken.symbol,
+        token_to: toToken.symbol,
+        amount_from: parseFloat(fromAmount),
+        amount_to: parseFloat(toAmount),
+        price_impact: parseFloat(priceImpact),
+        gas_fee: (Math.random() * 0.5 + 0.1).toFixed(2),
+        status: "completed",
+        tx_hash: "0x" + Math.random().toString(16).substr(2, 64)
+      });
+      setFromAmount("");
+      setToAmount("");
+    }
+  };
+
+  const isValidSwap = fromToken && toToken && fromAmount && parseFloat(fromAmount) > 0;
+
+  return (
+    <>
+      <Card className="bg-slate-900/50 border-white/10 backdrop-blur-xl">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-white">Swap</h2>
+            <div className="flex gap-2">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Refresh prices</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
+                <Settings className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* From Token */}
+          <div className="space-y-4">
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/10 hover:border-white/20 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-400">From</span>
+                <span className="text-sm text-gray-400">
+                  Balance: {fromToken ? "1.5" : "0.0"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  placeholder="0.0"
+                  value={fromAmount}
+                  onChange={(e) => setFromAmount(e.target.value)}
+                  className="text-2xl font-bold bg-transparent border-none text-white p-0 h-auto focus-visible:ring-0"
+                />
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleMaxClick}
+                    className="text-blue-400 hover:text-blue-300 h-6 px-2"
+                  >
+                    MAX
+                  </Button>
+                  <Button
+                    onClick={() => setShowFromSelector(true)}
+                    className="bg-white/10 hover:bg-white/20 rounded-xl px-3 py-2 h-auto"
+                  >
+                    {fromToken ? (
+                      <div className="flex items-center gap-2">
+                        {fromToken.logo_url && (
+                          <img src={fromToken.logo_url} alt={fromToken.symbol} className="w-6 h-6 rounded-full" />
+                        )}
+                        <span className="font-medium text-white">{fromToken.symbol}</span>
+                      </div>
+                    ) : (
+                      <span className="text-white">Select token</span>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              {fromAmount && fromToken && (
+                <p className="text-sm text-gray-400 mt-2">
+                  ≈ ${(parseFloat(fromAmount) * fromToken.price_usd).toFixed(2)}
+                </p>
+              )}
+            </div>
+
+            {/* Swap Button */}
+            <div className="flex justify-center -my-2 relative z-10">
+              <button
+                onClick={handleSwapTokens}
+                className="bg-slate-800 hover:bg-slate-700 border-4 border-slate-900/50 rounded-xl p-2 transition-all hover:rotate-180 duration-300"
+              >
+                <ArrowDown className="w-5 h-5 text-white" />
+              </button>
+            </div>
+
+            {/* To Token */}
+            <div className="bg-white/5 rounded-2xl p-4 border border-white/10 hover:border-white/20 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-400">To</span>
+                <span className="text-sm text-gray-400">
+                  Balance: {toToken ? "0.0" : "0.0"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  placeholder="0.0"
+                  value={toAmount}
+                  readOnly
+                  className="text-2xl font-bold bg-transparent border-none text-white p-0 h-auto focus-visible:ring-0"
+                />
+                <Button
+                  onClick={() => setShowToSelector(true)}
+                  className="bg-white/10 hover:bg-white/20 rounded-xl px-3 py-2 h-auto"
+                >
+                  {toToken ? (
+                    <div className="flex items-center gap-2">
+                      {toToken.logo_url && (
+                        <img src={toToken.logo_url} alt={toToken.symbol} className="w-6 h-6 rounded-full" />
+                      )}
+                      <span className="font-medium text-white">{toToken.symbol}</span>
+                    </div>
+                  ) : (
+                    <span className="text-white">Select token</span>
+                  )}
+                </Button>
+              </div>
+              {toAmount && toToken && (
+                <p className="text-sm text-gray-400 mt-2">
+                  ≈ ${(parseFloat(toAmount) * toToken.price_usd).toFixed(2)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Swap Details */}
+          {isValidSwap && (
+            <div className="mt-4 space-y-2 bg-white/5 rounded-xl p-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Rate</span>
+                <span className="text-white font-medium">
+                  1 {fromToken.symbol} = {(fromToken.price_usd / toToken.price_usd).toFixed(4)} {toToken.symbol}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Price Impact</span>
+                <span className={`font-medium ${parseFloat(priceImpact) > 1 ? "text-red-400" : "text-green-400"}`}>
+                  {priceImpact}%
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Network Fee</span>
+                <span className="text-white font-medium">~$0.25</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Max. Slippage</span>
+                <span className="text-white font-medium">{slippage}%</span>
+              </div>
+            </div>
+          )}
+
+          {/* Swap Button */}
+          <Button
+            onClick={handleSwap}
+            disabled={!isValidSwap}
+            className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-14 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {!fromToken || !toToken ? (
+              "Select tokens"
+            ) : !fromAmount ? (
+              "Enter amount"
+            ) : (
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                Swap
+              </div>
+            )}
+          </Button>
+
+          {parseFloat(priceImpact) > 3 && (
+            <div className="mt-3 flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-yellow-200">
+                <p className="font-medium">High price impact</p>
+                <p className="text-yellow-300/80">This trade will significantly affect the token price.</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <TokenSelector
+        isOpen={showFromSelector}
+        onClose={() => setShowFromSelector(false)}
+        onSelect={(token) => {
+          setFromToken(token);
+          setShowFromSelector(false);
+        }}
+        selectedToken={fromToken}
+      />
+
+      <TokenSelector
+        isOpen={showToSelector}
+        onClose={() => setShowToSelector(false)}
+        onSelect={(token) => {
+          setToToken(token);
+          setShowToSelector(false);
+        }}
+        selectedToken={toToken}
+      />
+    </>
+  );
+}
